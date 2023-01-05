@@ -15,7 +15,6 @@ import {
   Int32,
   Long,
   Binary,
-  Map,
   calculateObjectSize,
   Double,
   EJSON,

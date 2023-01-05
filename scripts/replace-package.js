@@ -12,27 +12,32 @@ const replacement = process.env.REPLACE_PACKAGE;
 if (!replacement) {
   throw new Error('REPLACE_PACKAGE missing from environment');
 }
-const parsed = replacement.trim().match(/^(?<from>[^:]+):(?<to>.+)$/);
-if (!parsed || !parsed.groups.from || !parsed.groups.to) {
-  throw new Error('Invalid format for REPLACE_PACKAGE');
-}
 
-const { from, to } = parsed.groups;
-for (const dir of ['.', ...fs.readdirSync('packages').map(dir => path.join('packages', dir))]) {
-  const packageJson = path.join(dir, 'package.json');
-  if (fs.existsSync(packageJson)) {
-    const target = pathToFileURL(path.resolve(to)).href;
-    const contents = JSON.parse(fs.readFileSync(packageJson));
-    for (const deps of [
-      contents.dependencies,
-      contents.devDependencies,
-      contents.optionalDependencies
-    ]) {
-      if (deps && deps[from]) {
-        console.info('Replacing', from, 'in', dir, 'with', target);
-        deps[from] = to;
+const replacements = replacement.trim().split(',');
+
+for (const replacement of replacements) {
+  const parsed = replacement.trim().match(/^(?<from>[^:]+):(?<to>.+)$/);
+  if (!parsed || !parsed.groups.from || !parsed.groups.to) {
+    throw new Error('Invalid format for REPLACE_PACKAGE');
+  }
+
+  const { from, to } = parsed.groups;
+  for (const dir of ['.', ...fs.readdirSync('packages').map(dir => path.join('packages', dir))]) {
+    const packageJson = path.join(dir, 'package.json');
+    if (fs.existsSync(packageJson)) {
+      const target = pathToFileURL(path.resolve(to)).href;
+      const contents = JSON.parse(fs.readFileSync(packageJson));
+      for (const deps of [
+        contents.dependencies,
+        contents.devDependencies,
+        contents.optionalDependencies
+      ]) {
+        if (deps && deps[from]) {
+          console.info('Replacing', from, 'in', dir, 'with', target);
+          deps[from] = to;
+        }
       }
+      fs.writeFileSync(packageJson, JSON.stringify(contents, null, '  ') + '\n');
     }
-    fs.writeFileSync(packageJson, JSON.stringify(contents, null, '  ') + '\n');
   }
 }
